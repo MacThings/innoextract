@@ -173,16 +173,34 @@ else()
 	set(INNOEXTRACT_HAVE_LZMA 0)
 endif()
 
-find_package(Boost REQUIRED COMPONENTS
-	iostreams
-	filesystem
-	date_time
-	system
-	program_options
+# Erst versuchen, das „neue“ Boost-Config (Homebrew 1.89+) zu benutzen
+set(_boost_components
+    iostreams
+    filesystem
+    date_time
+    program_options
 )
+
+# Boost.System ist ab 1.69/1.89 header-only; als Component nur noch optional
+find_package(Boost REQUIRED COMPONENTS ${_boost_components} OPTIONAL_COMPONENTS system)
+
 list(APPEND LIBRARIES ${Boost_LIBRARIES})
-link_directories(${Boost_LIBRARY_DIRS})
-include_directories(SYSTEM ${Boost_INCLUDE_DIR})
+
+# Bei neueren CMake/Boost-Versionen sind IMPORTED Targets verfügbar
+if(TARGET Boost::iostreams)
+    list(APPEND LIBRARIES
+        Boost::iostreams
+        Boost::filesystem
+        Boost::date_time
+        Boost::program_options
+    )
+    if(TARGET Boost::system)
+        list(APPEND LIBRARIES Boost::system)
+    endif()
+endif()
+
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+
 if(NOT Boost_VERSION_MACRO)
 	# CMP0093 changed Boost_VERSION to x.y.z format and provide the old format in Boost_VERSION_MACRO
 	set(Boost_VERSION_MACRO ${Boost_VERSION})
